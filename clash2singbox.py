@@ -2,18 +2,7 @@ import yaml
 import json
 import sys
 import regex as re
-
-#配置
-#美国分组
-bUS = True
-#香港分组
-bHK = True
-#新加坡分组
-bSG = True
-#日本分组
-bJP = False
-#台湾分组
-bTW = False
+import argparse
 
 supported_types = ['ss', 'vmess', 'trojan']
 us_regex = r'USA|US|United States|UnitedStates|美国|美國'
@@ -22,11 +11,14 @@ sg_regex = r'Singapore|SG|新加坡'
 jp_regex = r'Japan|JP|日本'
 tw_regex = r'Taiwan|TW|台湾|台灣'
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('Usage: clash2singbox.py clash_config_path [singbox_proxy_path]')
-        sys.exit(1)
-    with open(sys.argv[1], 'r', encoding='utf-8') as stream:
+def clash2singbox(clash_config_path, policies, extras=[]):
+    bUS = policies[0]
+    bHK = policies[1]
+    bSG = policies[2]
+    bJP = policies[3]
+    bTW = policies[4]
+
+    with open(clash_config_path, 'r', encoding='utf-8') as stream:
         data_loaded = yaml.safe_load(stream)
     data_loaded = data_loaded['proxies']
     sb_proxies = []
@@ -129,12 +121,57 @@ if __name__ == '__main__':
         sb_proxies.append(jp_policy)
     if bTW:
         sb_proxies.append(tw_policy)
-    if len(sys.argv) == 3:
-        outname = sys.argv[2]
-    else:
-        outname = 'singbox_proxies.json'
+
+    if len(extras) > 0:
+        countries = []
+        if bUS:
+            countries.append('United States')
+        if bHK:
+            countries.append('Hong Kong')
+        if bSG:
+            countries.append('Singapore')
+        if bJP:
+            countries.append('Japan')
+        if bTW:
+            countries.append('Taiwan')
+        countries.append('direct')
+        countries.append('block')
+        for extra in extras:
+            policy = {}
+            policy['type'] = 'selector'
+            policy['tag'] = extra
+            policy['outbounds'] = countries
+            sb_proxies.append(policy)
+
     out_conf = {}
     out_conf['outbounds'] = sb_proxies
+
+    return out_conf
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert clash config to singbox config')
+    parser.add_argument('clash_config_path', help='clash config path')
+    parser.add_argument('-o', '--output', help='output file name')
+    parser.add_argument('-us', '--us', action='store_true', help='include US policy')
+    parser.add_argument('-hk', '--hk', action='store_true', help='include Hong Kong policy')
+    parser.add_argument('-sg', '--sg', action='store_true', help='include Singapore policy')
+    parser.add_argument('-jp', '--jp', action='store_true', help='include Japan policy')
+    parser.add_argument('-tw', '--tw', action='store_true', help='include Taiwan policy')
+    args = parser.parse_args()
+
+    inname = args.clash_config_path
+    if args.output:
+        outname = args.output
+    else:
+        outname = 'singbox_proxies.json'
+    bUS = args.us
+    bHK = args.hk
+    bSG = args.sg
+    bJP = args.jp
+    bTW = args.tw
+
+    out_conf = clash2singbox(inname, [bUS, bHK, bSG, bJP, bTW])
+
     with open(outname, 'w', encoding='utf-8') as f:
         json.dump(out_conf, f, ensure_ascii=False, indent=2)
 

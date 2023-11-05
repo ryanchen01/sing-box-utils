@@ -3,6 +3,7 @@ import json
 import os
 import requests
 import regex as re
+import argparse
 
 def get_singbox_domainset(surge_rulset_path, policy):
     if  surge_rulset_path.startswith('https'):
@@ -152,14 +153,7 @@ def get_singbox_logical(line, policy):
     logical_dict['outbound'] = policy
     return logical_dict
 
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('Usage: clash2singbox.py surge_config_path [singbox_rule_path]')
-        sys.exit(1)
-
-    surge_config_path = sys.argv[1]
-    singbox_rule_path = sys.argv[2] if len(sys.argv) == 3 else 'singbox_rule.json'
+def surge2singbox(surge_config_path):
     singbox_rules = []
 
     with open(surge_config_path, 'r', encoding='utf-8') as f:
@@ -184,7 +178,7 @@ if __name__ == '__main__':
         if line.upper().split(',')[1].strip() == 'LAN':
             hasLAN = True
             break
-
+    extras = []
     for line in surge_config:
         if line.startswith('#') or len(line.strip()) == 0:
             continue
@@ -192,21 +186,43 @@ if __name__ == '__main__':
             singbox_rule = get_singbox_ruleset(line.split(',')[1].strip(), line.split(',')[2].strip())
             if singbox_rule != -1:
                 singbox_rules.append(singbox_rule)
+                extras.append(line.split(',')[2].strip())
         elif line.upper().startswith('DOMAIN-SET'):
             singbox_rule = get_singbox_domainset(line.split(',')[1].strip(), line.split(',')[2].strip())
             if singbox_rule != -1:
                 singbox_rules.append(singbox_rule)
+                extras.append(line.split(',')[2].strip())
         elif line.upper().startswith('AND') or line.upper().startswith('OR'):
             singbox_rule = get_singbox_logical(line, line.split(',')[2].strip())
             if singbox_rule != -1:
                 singbox_rules.append(singbox_rule)
+                extras.append(line.split(',')[2].strip())
         else:
             singbox_rule = get_singbox_rule(line, line.split(',')[2].strip(), hasLAN=hasLAN)
             if singbox_rule != -1:
                 singbox_rules.append(singbox_rule)
+                extras.append(line.split(',')[2].strip())
+
+    singbox_rules.append({'protocol': 'dns', 'outbound': 'dns-out'})
     config = {}
     config['route'] = {}
     config['route']['rules'] = singbox_rules
+
+    return config, extras
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert surge config rules to singbox config rules')
+    parser.add_argument('surge_config_path', help='surge config path')
+    parser.add_argument('-o', '--output', help='output file name')
+    args = parser.parse_args()
+    surge_config_path = args.surge_config_path
+    if args.output:
+        singbox_rule_path = args.output
+    else:
+        singbox_rule_path = 'singbox_rule.json'
+
+    config, extras = surge2singbox(surge_config_path)
+
     with open(singbox_rule_path, 'w') as f:
         json.dump(config, f, indent=2)
 
