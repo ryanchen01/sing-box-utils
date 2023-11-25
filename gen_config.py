@@ -54,7 +54,7 @@ if __name__ == "__main__":
         {
             "tag": "Ali",
             "address": "223.5.5.5",
-            "strategy": "ipv4_only",
+            "strategy": "prefer_ipv4",
             "detour": "direct"
         },
         {
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             "address": "https://223.5.5.5/dns-query",
             "address_resolver": "Ali",
             "address_strategy": "ipv4_only",
-            "strategy": "ipv4_only",
+            "strategy": "prefer_ipv4",
             "detour": "direct"
         }
         ],
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         }
         ],
         "final": "DoH",
-        "strategy": "ipv4_only"
+        "strategy": "prefer_ipv4"
     }
     out_conf["dns"] = dns_conf
     inbounds_conf = {

@@ -4,6 +4,7 @@ import os
 import requests
 import regex as re
 import argparse
+import numpy as np
 
 def get_singbox_domainset(surge_rulset_path, policy):
     if  surge_rulset_path.startswith('https'):
@@ -203,6 +204,7 @@ def surge2singbox(surge_config_path):
                 singbox_rules.append(singbox_rule)
                 extras.append(line.split(',')[2].strip())
 
+    singbox_rules = np.flip(singbox_rules, axis=0).tolist()
     singbox_rules.append({'protocol': 'dns', 'outbound': 'dns-out'})
     config = {}
     config['route'] = {}
